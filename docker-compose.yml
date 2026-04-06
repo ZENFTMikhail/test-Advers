@@ -1,0 +1,49 @@
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: meteor-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: meteor_app
+      MYSQL_USER: meteor_user
+      MYSQL_PASSWORD: meteor_pass
+      MYSQL_ROOT_HOST: '%'
+
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql 
+    command: --server-id=1 --log-bin=mysql-bin --binlog-format=ROW
+  mongo:
+    image: mongo:6
+    container_name: meteor-mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+
+  meteor:
+    build: .
+    platform: linux/amd64
+    container_name: meteor-app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+      - mysql
+    environment:
+      - ROOT_URL=http://localhost:3000
+      - MONGO_URL=mongodb://mongo:27017/meteor
+      - METEOR_WATCH_FORCE_POLLING=true
+    command: >
+       sh -c "meteor npm install &&
+         METEOR_WATCH_FORCE_POLLING=true meteor run --allow-superuser --settings settings.json"
+
+volumes:
+  mysql_data:
+  mongo_data:
+  meteor_node_modules:
+  meteor_meteor_local:
